@@ -10,3 +10,4 @@
 /TxHandler.class
 /UTXO.class
 /UTXOPool.class
+/BlockChain$BlockData.class
