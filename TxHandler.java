@@ -12,6 +12,10 @@ public class TxHandler {
     	upool = new UTXOPool(utxoPool);
     }
 
+    public UTXOPool getUTXOPool() {
+    	return upool;
+    }
+    
     /**
      * @return true if:
      * (1) all outputs claimed by {@code tx} are in the current UTXO pool, 
