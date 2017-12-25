@@ -10,6 +10,7 @@ public class BlockChain {
     private TransactionPool txPool; //global transaction pool
     private HashMap<Pair<Block, BlockData>, ArrayList<Block>> blockTree = new HashMap<Pair<Block, BlockData>, ArrayList<Block>>();
     private Block rootBlock;
+    private Pair<Block, BlockData> maxHeightBDPair;
 
     public class BlockData{
     	// plain old data class to record info about blocks
@@ -30,29 +31,22 @@ public class BlockChain {
     	ArrayList<Block> genBlockList = new ArrayList<Block>();
     	genBlockList.add(genesisBlock);
     	
-    	Pair<Block, BlockData> genPair = new Pair<Block, BlockData>(null, new BlockData(0)); //BlockData shouldn't be null
+    	Pair<Block, BlockData> genPair = new Pair<Block, BlockData>(genesisBlock, new BlockData(0)); //BlockData shouldn't be null
     	blockTree.put(genPair, genBlockList);
     	rootBlock = genesisBlock;
+    	maxHeightBDPair = genPair;
 ;    }
 
     /** Get the maximum height block */
     public Block getMaxHeightBlock() {
         // IMPLEMENT THIS
-    	int maxHeight = 0;
-    	Pair<Block, BlockData> maxHB = new Pair<Block, BlockData>(null, new BlockData(0));
-    	Set<Pair<Block, BlockData>> blocks = blockTree.keySet();
-    	for (Pair<Block, BlockData> bhPair : blocks) {
-    		if (bhPair.getValue().blockHeight > maxHeight) {
-    			maxHeight = bhPair.getValue().blockHeight;
-    			maxHB = bhPair;
-    		}
-    	}
-    	return maxHB.getKey(); 
+    	return maxHeightBDPair.getKey();
     }
 
     /** Get the UTXOPool for mining a new block on top of max height block */
     public UTXOPool getMaxHeightUTXOPool() {
         // IMPLEMENT THIS 
+    	return maxHeightBDPair.getValue().upool;
     }
 
     /** Get the transaction pool to mine a new block */
@@ -74,10 +68,46 @@ public class BlockChain {
      */
     public boolean addBlock(Block block) {
         // IMPLEMENT THIS
+    	for (Pair<Block, BlockData> bdPair : blockTree.keySet()) {
+    		if (bdPair.getKey().getHash() == block.getPrevBlockHash()) {
+    			int blockHeight = bdPair.getValue().blockHeight + 1;
+    			if (validateBlock(blockHeight, block, bdPair)) {
+    				blockTree.get(bdPair).add(block);
+    				Pair<Block, BlockData> newPair = new Pair<Block, BlockData>(block, new BlockData(blockHeight));
+    				blockTree.put(newPair, new ArrayList<Block>());
+    				if (blockHeight > maxHeightBDPair.getValue().blockHeight) {
+    					maxHeight = blockHeight;
+    					maxHeightBlock = block;
+    				}
+    				return true;
+    			}
+    			else 
+    				return false;
+    		}
+    	}
+    	return false;
     }
-
+    
     /** Add a transaction to the transaction pool */
     public void addTransaction(Transaction tx) {
         // IMPLEMENT THIS
+    }
+    
+    private UTXOPool createUTXOPool(Block block) {
+    	
+    }
+    
+    private boolean validateBlock(int height, Block block, Pair<Block, BlockData> prevBlock) {
+    	if (height <= maxHeight - CUT_OFF_AGE)
+    		return false;
+    	else {
+    		TxHandler txh = new TxHandler(prevBlock.getValue().upool);
+    		for (Transaction tx : block.getTransactions()) {
+    			if (!txh.isValidTx(tx)) {
+    				return false;
+    			}
+    		}
+    	}
+    	return true;
     }
 }
