@@ -16,9 +16,9 @@ public class BlockChain {
     	// plain old data class to record info about blocks
     	public int blockHeight;
     	public UTXOPool upool;
-    	public BlockData(int height /*, UTXOPool pool*/) {
+    	public BlockData(int height , UTXOPool pool) {
     		blockHeight = height;
-    		//upool = pool;
+    		upool = pool;
     	}
     }
     
@@ -31,7 +31,7 @@ public class BlockChain {
     	ArrayList<Block> genBlockList = new ArrayList<Block>();
     	genBlockList.add(genesisBlock);
     	
-    	Pair<Block, BlockData> genPair = new Pair<Block, BlockData>(genesisBlock, new BlockData(0)); //BlockData shouldn't be null
+    	Pair<Block, BlockData> genPair = new Pair<Block, BlockData>(genesisBlock, new BlockData(0, makeUTXOPool(genesisBlock))); //BlockData shouldn't be null
     	blockTree.put(genPair, genBlockList);
     	rootBlock = genesisBlock;
     	maxHeightBDPair = genPair;
@@ -69,15 +69,14 @@ public class BlockChain {
     public boolean addBlock(Block block) {
         // IMPLEMENT THIS
     	for (Pair<Block, BlockData> bdPair : blockTree.keySet()) {
-    		if (bdPair.getKey().getHash() == block.getPrevBlockHash()) {
+    		if (block.getPrevBlockHash() != null && bdPair.getKey().getHash() == block.getPrevBlockHash()) {
     			int blockHeight = bdPair.getValue().blockHeight + 1;
     			if (validateBlock(blockHeight, block, bdPair)) {
     				blockTree.get(bdPair).add(block);
-    				Pair<Block, BlockData> newPair = new Pair<Block, BlockData>(block, new BlockData(blockHeight));
+    				Pair<Block, BlockData> newPair = new Pair<Block, BlockData>(block, new BlockData(blockHeight, makeUTXOPool(block)));
     				blockTree.put(newPair, new ArrayList<Block>());
     				if (blockHeight > maxHeightBDPair.getValue().blockHeight) {
-    					maxHeight = blockHeight;
-    					maxHeightBlock = block;
+    					maxHeightBDPair = newPair;
     				}
     				return true;
     			}
@@ -93,12 +92,33 @@ public class BlockChain {
         // IMPLEMENT THIS
     }
     
-    private UTXOPool createUTXOPool(Block block) {
-    	
+    private UTXOPool makeUTXOPool(Block block/*, Pair<Block, BlockData> prevBlock*/) {
+    	UTXOPool pool = new UTXOPool();
+//    	if (block.getHash() == rootBlock.getHash()) { // the genesis block
+    		for (Transaction tx : block.getTransactions()) {
+    			for (Transaction.Input in : tx.getInputs()) {
+    				pool.addUTXO(new UTXO(in.prevTxHash, in.outputIndex), txPool.getTransaction(in.prevTxHash).getOutput(in.outputIndex));
+    			}
+    		}
+//    	}
+//    	else {
+//    		UTXOPool deadPool = prevBlock.getValue().upool;
+//    		for (Transaction tx : block.getTransactions()) {
+//    			for (Transaction.Input in : tx.getInputs()) {
+//    				for (UTXO u : deadPool.getAllUTXO()) {
+//    					if (u.getTxHash() == in.prevTxHash) {
+//    						
+//    					}
+//    				}
+//    				pool.addUTXO(new UTXO(in.prevTxHash, in.outputIndex) );
+//    			}
+//    		}
+//    	}
+    	return pool;
     }
     
     private boolean validateBlock(int height, Block block, Pair<Block, BlockData> prevBlock) {
-    	if (height <= maxHeight - CUT_OFF_AGE)
+    	if (height <= maxHeightBDPair.getValue().blockHeight - CUT_OFF_AGE)
     		return false;
     	else {
     		TxHandler txh = new TxHandler(prevBlock.getValue().upool);
