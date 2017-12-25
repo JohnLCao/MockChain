@@ -52,6 +52,7 @@ public class BlockChain {
     /** Get the transaction pool to mine a new block */
     public TransactionPool getTransactionPool() {
         // IMPLEMENT THIS
+    	return txPool;
     }
 
     /**
@@ -78,6 +79,9 @@ public class BlockChain {
     				if (blockHeight > maxHeightBDPair.getValue().blockHeight) {
     					maxHeightBDPair = newPair;
     				}
+    				for (Transaction tx : block.getTransactions()) {
+    					txPool.removeTransaction(tx.getHash());
+    				}
     				return true;
     			}
     			else 
@@ -90,6 +94,7 @@ public class BlockChain {
     /** Add a transaction to the transaction pool */
     public void addTransaction(Transaction tx) {
         // IMPLEMENT THIS
+    	txPool.addTransaction(tx);
     }
     
     private UTXOPool makeUTXOPool(Block block/*, Pair<Block, BlockData> prevBlock*/) {
